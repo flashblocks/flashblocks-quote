@@ -8,7 +8,7 @@
 
 // ─── Base ────────────────────────────────────────────────────────────────────
 
-.wp-block-flashblocks-flashblocks-quotes {
+.wp-block-flashblocks-quote {
 	container-type: inline-size;
 	margin-block: 1.5rem;
 
@@ -78,14 +78,14 @@
 //
 // Wraps the quote in a bordered card with a subtle shadow.
 
-.wp-block-flashblocks-flashblocks-quotes.is-style-card {
+.wp-block-flashblocks-quote.is-style-card {
 	border: 1px solid rgba( 0, 0, 0, 0.12 );
 	border-radius: 0.5rem;
 	padding: 1.5rem;
 	box-shadow: 0 2px 6px rgba( 0, 0, 0, 0.08 );
 
 	// Remove the left border on the body — the card container provides context.
-	.wp-block-flashblocks-flashblocks-quotes__body {
+	.wp-block-flashblocks-quote__body {
 		border-inline-start: none;
 		padding-inline-start: 0;
 	}
@@ -95,15 +95,15 @@
 //
 // Clean, no borders — relies on typographic weight to signal the quote.
 
-.wp-block-flashblocks-flashblocks-quotes.is-style-minimal {
-	.wp-block-flashblocks-flashblocks-quotes__body {
+.wp-block-flashblocks-quote.is-style-minimal {
+	.wp-block-flashblocks-quote__body {
 		border-inline-start: none;
 		padding-inline-start: 0;
 		font-size: 1.25rem;
 		font-style: italic;
 	}
 
-	.wp-block-flashblocks-flashblocks-quotes__author-name {
+	.wp-block-flashblocks-quote__author-name {
 		font-weight: 700;
 	}
 }
@@ -111,7 +111,7 @@
 // ─── Reduced-motion ──────────────────────────────────────────────────────────
 
 @media ( prefers-reduced-motion: reduce ) {
-	.wp-block-flashblocks-flashblocks-quotes {
+	.wp-block-flashblocks-quote {
 		// Nothing animated yet; placeholder for future transitions.
 		transition: none;
 	}

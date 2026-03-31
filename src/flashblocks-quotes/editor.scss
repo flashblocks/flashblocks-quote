@@ -1,20 +1,4 @@
 /**
  * Editor-only styles for the flashblocks/flashblocks-quotes block.
+ * Selection controls live in the sidebar — no extra canvas styles needed.
  */
-
-.wp-block-flashblocks-flashblocks-quotes {
-	// Post picker shown below the preview in standalone mode.
-	&__editor-controls {
-		margin-block-start: 1rem;
-		padding-block-start: 0.75rem;
-		border-block-start: 1px dashed rgba( 0, 0, 0, 0.2 );
-
-		// Ensure the combobox label is visually distinct from quote content.
-		.components-base-control__label {
-			font-size: 0.75rem;
-			text-transform: uppercase;
-			letter-spacing: 0.04em;
-			color: #757575; // Meets 4.5 : 1 on a white background.
-		}
-	}
-}

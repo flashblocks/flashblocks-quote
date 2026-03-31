@@ -1,16 +1,24 @@
 /**
  * Editor component for flashblocks/flashblocks-quotes.
  *
- * - Inside a Query Loop: reads context.postId and renders a live preview.
- * - Standalone: shows a searchable post picker, then renders a live preview
- *   with a "Change quote" control beneath it.
+ * Selection controls (category filter + post picker) live in the block sidebar
+ * via InspectorControls. The canvas shows only the quote preview.
+ *
+ * - Inside a Query Loop: reads context.postId, no picker shown.
+ * - Standalone: sidebar controls let the user filter by category and pick a quote.
  */
 
 import { __ } from '@wordpress/i18n';
-import { useBlockProps } from '@wordpress/block-editor';
+import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
-import { ComboboxControl, Placeholder, Spinner } from '@wordpress/components';
+import {
+	ComboboxControl,
+	PanelBody,
+	SelectControl,
+	Placeholder,
+	Spinner,
+} from '@wordpress/components';
 import { useState } from '@wordpress/element';
 
 import './editor.scss';
@@ -18,15 +26,37 @@ import './editor.scss';
 export default function Edit( { attributes, setAttributes, context } ) {
 	const { selectedPostId } = attributes;
 
-	// Query Loop passes the current iteration's post ID via context.
-	const contextPostId = context?.postId;
-	const isInQueryLoop = !! contextPostId;
-	const postId = isInQueryLoop ? contextPostId : selectedPostId || 0;
+	// A genuine Query Loop context means the parent is iterating over
+	// flashblocks_quote posts. WordPress also injects a global postId/postType
+	// for the page being edited — we must ignore that by checking postType.
+	const contextPostId   = context?.postId;
+	const contextPostType = context?.postType;
+	const isInQueryLoop   = !! contextPostId && contextPostType === 'flashblocks_quote';
+	const postId          = selectedPostId || ( isInQueryLoop ? contextPostId : 0 );
 
-	// Search string driving the post picker options.
-	const [ searchInput, setSearchInput ] = useState( '' );
+	// Local UI state — not persisted in block attributes.
+	const [ categoryFilter, setCategoryFilter ] = useState( '' );
+	const [ searchInput, setSearchInput ]       = useState( '' );
 
-	// Fetch quote posts for the picker dropdown.
+	// ── Fetch categories for the filter dropdown ─────────────────────────────
+	const { categoryOptions } = useSelect( ( select ) => {
+		const records = select( coreStore ).getEntityRecords(
+			'taxonomy',
+			'flashblocks_quote_category',
+			{ per_page: 100, hide_empty: false, _fields: 'id,name' }
+		);
+		return {
+			categoryOptions: [
+				{ value: '', label: __( 'All Categories', 'flashblocks-quotes' ) },
+				...( records ?? [] ).map( ( term ) => ( {
+					value: String( term.id ),
+					label: term.name,
+				} ) ),
+			],
+		};
+	}, [] );
+
+	// ── Fetch quotes for the picker (filtered by category + search) ──────────
 	const { pickerOptions, isLoadingOptions } = useSelect(
 		( select ) => {
 			const { getEntityRecords, isResolving } = select( coreStore );
@@ -34,7 +64,10 @@ export default function Edit( { attributes, setAttributes, context } ) {
 				per_page: 20,
 				status: 'publish',
 				_fields: 'id,title',
-				...(searchInput ? { search: searchInput } : {}),
+				...( searchInput ? { search: searchInput } : {} ),
+				...( categoryFilter
+					? { 'flashblocks-quote-categories': Number( categoryFilter ) }
+					: {} ),
 			};
 			const records = getEntityRecords( 'postType', 'flashblocks_quote', query );
 			return {
@@ -49,26 +82,21 @@ export default function Edit( { attributes, setAttributes, context } ) {
 				] ),
 			};
 		},
-		[ searchInput ]
+		[ categoryFilter, searchInput ]
 	);
 
-	// Fetch the active post data for the editor preview.
+	// ── Fetch the active post for the canvas preview ─────────────────────────
 	const { quotePost, featuredImage, isLoadingPost } = useSelect(
 		( select ) => {
 			if ( ! postId ) {
 				return { quotePost: null, featuredImage: null, isLoadingPost: false };
 			}
-
 			const { getEntityRecord, isResolving } = select( coreStore );
-
-			const post = getEntityRecord( 'postType', 'flashblocks_quote', postId );
+			const post    = getEntityRecord( 'postType', 'flashblocks_quote', postId );
 			const mediaId = post?.featured_media;
-			const media = mediaId
-				? getEntityRecord( 'root', 'media', mediaId )
-				: null;
-
+			const media   = mediaId ? getEntityRecord( 'root', 'media', mediaId ) : null;
 			return {
-				quotePost: post ?? null,
+				quotePost:     post ?? null,
 				featuredImage: media ?? null,
 				isLoadingPost: isResolving( 'getEntityRecord', [
 					'postType',
@@ -80,144 +108,137 @@ export default function Edit( { attributes, setAttributes, context } ) {
 		[ postId ]
 	);
 
-	const blockProps = useBlockProps( { className: 'wp-block-flashblocks-flashblocks-quotes' } );
+	const blockProps = useBlockProps();
 
-	// ── No quote selected and not in a loop ──────────────────────────────────
+	// ── Sidebar controls (standalone only) ───────────────────────────────────
+	const sidebarControls = ! isInQueryLoop && (
+		<InspectorControls>
+			<PanelBody
+				title={ __( 'Quote Selection', 'flashblocks-quotes' ) }
+				initialOpen={ true }
+			>
+				<SelectControl
+					__nextHasNoMarginBottom
+					__next40pxDefaultSize
+					label={ __( 'Category', 'flashblocks-quotes' ) }
+					value={ categoryFilter }
+					options={ categoryOptions }
+					onChange={ ( val ) => {
+						setCategoryFilter( val );
+						setSearchInput( '' );
+					} }
+				/>
+				<ComboboxControl
+					__nextHasNoMarginBottom
+					label={ __( 'Quote', 'flashblocks-quotes' ) }
+					help={ __( 'Type to search by title.', 'flashblocks-quotes' ) }
+					value={ selectedPostId ? String( selectedPostId ) : '' }
+					options={ pickerOptions }
+					onFilterValueChange={ setSearchInput }
+					onChange={ ( val ) => {
+						if ( val ) setAttributes( { selectedPostId: Number( val ) } );
+					} }
+					isLoading={ isLoadingOptions }
+				/>
+			</PanelBody>
+		</InspectorControls>
+	);
+
+	// ── Canvas: no quote selected ─────────────────────────────────────────────
 	if ( ! isInQueryLoop && ! selectedPostId ) {
 		return (
-			<div { ...blockProps }>
-				<Placeholder
-					icon="format-quote"
-					label={ __( 'Flashblocks Quote', 'flashblocks-quotes' ) }
-					instructions={ __(
-						'Search for a quote to display.',
-						'flashblocks-quotes'
-					) }
-				>
-					<ComboboxControl
-						__nextHasNoMarginBottom
-						label={ __( 'Select a quote', 'flashblocks-quotes' ) }
-						value=""
-						options={ pickerOptions }
-						onFilterValueChange={ setSearchInput }
-						onChange={ ( val ) => {
-							if ( val ) {
-								setAttributes( { selectedPostId: Number( val ) } );
-							}
-						} }
-						isLoading={ isLoadingOptions }
+			<>
+				{ sidebarControls }
+				<div { ...blockProps }>
+					<Placeholder
+						icon="format-quote"
+						label={ __( 'Flashblocks Quote', 'flashblocks-quotes' ) }
+						instructions={ __(
+							'Choose a quote using the block settings in the sidebar.',
+							'flashblocks-quotes'
+						) }
 					/>
-				</Placeholder>
-			</div>
+				</div>
+			</>
 		);
 	}
 
-	// ── Loading ──────────────────────────────────────────────────────────────
+	// ── Canvas: loading ───────────────────────────────────────────────────────
 	if ( isLoadingPost || ( postId && ! quotePost ) ) {
 		return (
-			<div { ...blockProps }>
-				<Spinner />
-			</div>
+			<>
+				{ sidebarControls }
+				<div { ...blockProps }>
+					<Spinner />
+				</div>
+			</>
 		);
 	}
 
-	// ── Post not found (e.g. deleted) ────────────────────────────────────────
+	// ── Canvas: post not found ────────────────────────────────────────────────
 	if ( ! quotePost ) {
 		return (
-			<div { ...blockProps }>
-				<Placeholder
-					icon="warning"
-					label={ __( 'Quote not found', 'flashblocks-quotes' ) }
-					instructions={ __(
-						'The selected quote could not be found. Choose another.',
-						'flashblocks-quotes'
-					) }
-				>
-					{ ! isInQueryLoop && (
-						<ComboboxControl
-							__nextHasNoMarginBottom
-							label={ __( 'Select a quote', 'flashblocks-quotes' ) }
-							value={ String( selectedPostId ) }
-							options={ pickerOptions }
-							onFilterValueChange={ setSearchInput }
-							onChange={ ( val ) => {
-								if ( val ) {
-									setAttributes( { selectedPostId: Number( val ) } );
-								}
-							} }
-							isLoading={ isLoadingOptions }
-						/>
-					) }
-				</Placeholder>
-			</div>
+			<>
+				{ sidebarControls }
+				<div { ...blockProps }>
+					<Placeholder
+						icon="warning"
+						label={ __( 'Quote not found', 'flashblocks-quotes' ) }
+						instructions={ __(
+							'The selected quote could not be found. Choose another in the sidebar.',
+							'flashblocks-quotes'
+						) }
+					/>
+				</div>
+			</>
 		);
 	}
 
-	// ── Live preview ─────────────────────────────────────────────────────────
-	const authorName = quotePost.meta?._flashblocks_quote_author_name || '';
-	const authorRole = quotePost.meta?._flashblocks_quote_author_role || '';
-	const photoUrl   = featuredImage?.source_url || '';
-	const content    = quotePost.content?.rendered || '';
-
+	// ── Canvas: preview ───────────────────────────────────────────────────────
+	const authorName     = quotePost.meta?._flashblocks_quote_author_name || '';
+	const authorRole     = quotePost.meta?._flashblocks_quote_author_role || '';
+	const photoUrl       = featuredImage?.source_url || '';
+	const content        = quotePost.content?.rendered || '';
 	const hasAttribution = authorName || authorRole || photoUrl;
 
 	return (
-		<figure { ...blockProps }>
-			{ /* Quote body */ }
-			<blockquote
-				className="wp-block-flashblocks-flashblocks-quotes__body"
-				// eslint-disable-next-line react/no-danger
-				dangerouslySetInnerHTML={ { __html: content } }
-			/>
-
-			{ /* Attribution */ }
-			{ hasAttribution && (
-				<figcaption className="wp-block-flashblocks-flashblocks-quotes__attribution">
-					{ photoUrl && (
-						<div
-							className="wp-block-flashblocks-flashblocks-quotes__photo-wrap"
-							aria-hidden="true"
-						>
-							<img
-								className="wp-block-flashblocks-flashblocks-quotes__author-photo"
-								src={ photoUrl }
-								alt={ authorName || '' }
-							/>
-						</div>
-					) }
-					<cite className="wp-block-flashblocks-flashblocks-quotes__cite">
-						{ authorName && (
-							<span className="wp-block-flashblocks-flashblocks-quotes__author-name">
-								{ authorName }
-							</span>
+		<>
+			{ sidebarControls }
+			<figure { ...blockProps }>
+				<blockquote
+					className="wp-block-flashblocks-quote__body"
+					// eslint-disable-next-line react/no-danger
+					dangerouslySetInnerHTML={ { __html: content } }
+				/>
+				{ hasAttribution && (
+					<figcaption className="wp-block-flashblocks-quote__attribution">
+						{ photoUrl && (
+							<div
+								className="wp-block-flashblocks-quote__photo-wrap"
+								aria-hidden="true"
+							>
+								<img
+									className="wp-block-flashblocks-quote__author-photo"
+									src={ photoUrl }
+									alt={ authorName || '' }
+								/>
+							</div>
 						) }
-						{ authorRole && (
-							<span className="wp-block-flashblocks-flashblocks-quotes__author-role">
-								{ authorRole }
-							</span>
-						) }
-					</cite>
-				</figcaption>
-			) }
-
-			{ /* Post picker shown below the preview when standalone */ }
-			{ ! isInQueryLoop && (
-				<div className="wp-block-flashblocks-flashblocks-quotes__editor-controls">
-					<ComboboxControl
-						__nextHasNoMarginBottom
-						label={ __( 'Change quote', 'flashblocks-quotes' ) }
-						value={ String( selectedPostId ) }
-						options={ pickerOptions }
-						onFilterValueChange={ setSearchInput }
-						onChange={ ( val ) => {
-							if ( val ) {
-								setAttributes( { selectedPostId: Number( val ) } );
-							}
-						} }
-						isLoading={ isLoadingOptions }
-					/>
-				</div>
-			) }
-		</figure>
+						<cite className="wp-block-flashblocks-quote__cite">
+							{ authorName && (
+								<span className="wp-block-flashblocks-quote__author-name">
+									{ authorName }
+								</span>
+							) }
+							{ authorRole && (
+								<span className="wp-block-flashblocks-quote__author-role">
+									{ authorRole }
+								</span>
+							) }
+						</cite>
+					</figcaption>
+				) }
+			</figure>
+		</>
 	);
 }

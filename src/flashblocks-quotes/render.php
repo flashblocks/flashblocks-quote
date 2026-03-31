@@ -10,10 +10,15 @@
  * @package FlashblocksQuotes
  */
 
-// Prefer Query Loop context post ID; fall back to the manually chosen post.
-$post_id = ! empty( $block->context['postId'] )
-	? (int) $block->context['postId']
-	: ( ! empty( $attributes['selectedPostId'] ) ? (int) $attributes['selectedPostId'] : 0 );
+// A genuine Query Loop context means postType is 'flashblocks_quote'.
+// WordPress also injects a global postId/postType for the page being rendered —
+// we must ignore that by checking postType, otherwise we'd load the wrong post.
+$context_is_query_loop = ! empty( $block->context['postId'] )
+	&& ( $block->context['postType'] ?? '' ) === 'flashblocks_quote';
+
+$post_id = ! empty( $attributes['selectedPostId'] )
+	? (int) $attributes['selectedPostId']
+	: ( $context_is_query_loop ? (int) $block->context['postId'] : 0 );
 
 if ( ! $post_id ) {
 	return;
@@ -51,7 +56,7 @@ if ( $photo_id ) {
 		'thumbnail',
 		false,
 		array(
-			'class' => 'wp-block-flashblocks-flashblocks-quotes__author-photo',
+			'class' => 'wp-block-flashblocks-quote__author-photo',
 			'alt'   => $author_name ? esc_attr( $author_name ) : '',
 		)
 	);
@@ -62,28 +67,28 @@ $wrapper_attrs   = get_block_wrapper_attributes();
 ?>
 <figure <?php echo $wrapper_attrs; ?>>
 
-	<blockquote class="wp-block-flashblocks-flashblocks-quotes__body">
+	<blockquote class="wp-block-flashblocks-quote__body">
 		<?php echo $quote_content; ?>
 	</blockquote>
 
 	<?php if ( $has_attribution ) : ?>
-	<figcaption class="wp-block-flashblocks-flashblocks-quotes__attribution">
+	<figcaption class="wp-block-flashblocks-quote__attribution">
 
 		<?php if ( $photo_html ) : ?>
-		<div class="wp-block-flashblocks-flashblocks-quotes__photo-wrap" aria-hidden="true">
+		<div class="wp-block-flashblocks-quote__photo-wrap" aria-hidden="true">
 			<?php echo $photo_html; ?>
 		</div>
 		<?php endif; ?>
 
-		<cite class="wp-block-flashblocks-flashblocks-quotes__cite">
+		<cite class="wp-block-flashblocks-quote__cite">
 			<?php if ( $author_name ) : ?>
-				<span class="wp-block-flashblocks-flashblocks-quotes__author-name">
+				<span class="wp-block-flashblocks-quote__author-name">
 					<?php echo esc_html( $author_name ); ?>
 				</span>
 			<?php endif; ?>
 
 			<?php if ( $author_role ) : ?>
-				<span class="wp-block-flashblocks-flashblocks-quotes__author-role">
+				<span class="wp-block-flashblocks-quote__author-role">
 					<?php echo esc_html( $author_role ); ?>
 				</span>
 			<?php endif; ?>
