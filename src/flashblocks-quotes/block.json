@@ -28,6 +28,13 @@
 			"padding": true,
 			"margin": true
 		},
+		"shadow": true,
+		"border": {
+			"color": true,
+			"radius": true,
+			"style": true,
+			"width": true
+		},
 		"typography": {
 			"fontSize": true,
 			"lineHeight": true,
