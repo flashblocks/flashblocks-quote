@@ -93,6 +93,21 @@ function flashblocks_register_quote_category_taxonomy() {
 add_action( 'init', 'flashblocks_register_quote_category_taxonomy' );
 
 /**
+ * Flushes rewrite rules once whenever the plugin version changes.
+ *
+ * register_activation_hook() does not fire for mu-plugins, so we use a
+ * version-stamped option checked on every init (priority 99, after CPT/taxonomy
+ * registration). This is a no-op on every normal request after the first run.
+ */
+function flashblocks_maybe_flush_rewrite_rules() {
+	if ( get_option( 'flashblocks_quote_rewrite_version' ) !== FLASHBLOCKS_QUOTE_VERSION ) {
+		flush_rewrite_rules();
+		update_option( 'flashblocks_quote_rewrite_version', FLASHBLOCKS_QUOTE_VERSION );
+	}
+}
+add_action( 'init', 'flashblocks_maybe_flush_rewrite_rules', 99 );
+
+/**
  * Updates the placeholder text shown in the Gutenberg title field for quotes.
  *
  * @param string  $placeholder Default placeholder.
@@ -105,7 +120,9 @@ function flashblocks_quote_title_placeholder( $placeholder, $post ) {
 	}
 	return $placeholder;
 }
-add_filter( 'enter_title_here', 'flashblocks_quote_title_placeholder', 10, 2 );
+if ( is_admin() ) {
+	add_filter( 'enter_title_here', 'flashblocks_quote_title_placeholder', 10, 2 );
+}
 
 /**
  * Auto-generates a title from the first 7 words of the quote body when the
@@ -153,7 +170,10 @@ function flashblocks_quote_list_columns( $columns ) {
 			+ array_slice( $columns, $pos + 1, null, true )
 		: $columns + $insert;
 }
-add_filter( 'manage_flashblocks_quote_posts_columns', 'flashblocks_quote_list_columns' );
+if ( is_admin() ) {
+	add_filter( 'manage_flashblocks_quote_posts_columns', 'flashblocks_quote_list_columns' );
+	add_action( 'manage_flashblocks_quote_posts_custom_column', 'flashblocks_quote_list_column_content', 10, 2 );
+}
 
 /**
  * Renders the Author column value for each row.
@@ -180,4 +200,3 @@ function flashblocks_quote_list_column_content( $column, $post_id ) {
 			. '</span>';
 	}
 }
-add_action( 'manage_flashblocks_quote_posts_custom_column', 'flashblocks_quote_list_column_content', 10, 2 );

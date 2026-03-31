@@ -17,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+define( 'FLASHBLOCKS_QUOTE_VERSION', '0.1.0' );
+
 require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/meta.php';
 
