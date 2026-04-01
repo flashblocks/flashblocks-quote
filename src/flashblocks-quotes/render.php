@@ -63,7 +63,10 @@ if ( $photo_id ) {
 }
 
 $has_attribution = $author_name || $author_role || $photo_html;
-$wrapper_attrs   = get_block_wrapper_attributes();
+
+$text_align    = isset( $attributes['textAlign'] ) ? $attributes['textAlign'] : '';
+$extra_classes = $text_align ? array( 'class' => 'has-text-align-' . esc_attr( $text_align ) ) : array();
+$wrapper_attrs = get_block_wrapper_attributes( $extra_classes );
 ?>
 <figure <?php echo $wrapper_attrs; ?>>
 

@@ -9,7 +9,12 @@
  */
 
 import { __ } from '@wordpress/i18n';
-import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
+import {
+	useBlockProps,
+	InspectorControls,
+	BlockControls,
+	AlignmentControl,
+} from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import {
@@ -22,7 +27,7 @@ import {
 import { useState } from '@wordpress/element';
 
 export default function Edit( { attributes, setAttributes, context } ) {
-	const { selectedPostId } = attributes;
+	const { selectedPostId, textAlign } = attributes;
 
 	// A genuine Query Loop context means the parent is iterating over
 	// flashblocks_quote posts. WordPress also injects a global postId/postType
@@ -106,7 +111,18 @@ export default function Edit( { attributes, setAttributes, context } ) {
 		[ postId ]
 	);
 
-	const blockProps = useBlockProps();
+	const blockProps = useBlockProps( {
+		className: textAlign ? `has-text-align-${ textAlign }` : undefined,
+	} );
+
+	const alignmentToolbar = (
+		<BlockControls group="block">
+			<AlignmentControl
+				value={ textAlign }
+				onChange={ ( val ) => setAttributes( { textAlign: val } ) }
+			/>
+		</BlockControls>
+	);
 
 	// ── Sidebar controls (standalone only) ───────────────────────────────────
 	const sidebarControls = ! isInQueryLoop && (
@@ -146,6 +162,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	if ( ! isInQueryLoop && ! selectedPostId ) {
 		return (
 			<>
+				{ alignmentToolbar }
 				{ sidebarControls }
 				<div { ...blockProps }>
 					<Placeholder
@@ -165,6 +182,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	if ( isLoadingPost || ( postId && ! quotePost ) ) {
 		return (
 			<>
+				{ alignmentToolbar }
 				{ sidebarControls }
 				<div { ...blockProps }>
 					<Spinner />
@@ -177,6 +195,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	if ( ! quotePost ) {
 		return (
 			<>
+				{ alignmentToolbar }
 				{ sidebarControls }
 				<div { ...blockProps }>
 					<Placeholder
@@ -201,6 +220,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 
 	return (
 		<>
+			{ alignmentToolbar }
 			{ sidebarControls }
 			<figure { ...blockProps }>
 				<blockquote

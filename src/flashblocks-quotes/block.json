@@ -13,13 +13,23 @@
 		"selectedPostId": {
 			"type": "integer",
 			"default": 0
+		},
+		"textAlign": {
+			"type": "string"
 		}
 	},
 	"usesContext": [ "postId", "postType" ],
 	"supports": {
 		"html": false,
 		"anchor": true,
-		"align": [ "wide", "full" ],
+		"align": [ "left", "right", "wide", "full" ],
+		"background": {
+			"backgroundImage": true,
+			"backgroundSize": true,
+			"__experimentalDefaultControls": {
+				"backgroundImage": true
+			}
+		},
 		"color": {
 			"gradients": true,
 			"heading": true,
@@ -28,6 +38,12 @@
 			"__experimentalDefaultControls": {
 				"background": true,
 				"text": true
+			}
+		},
+		"dimensions": {
+			"minHeight": true,
+			"__experimentalDefaultControls": {
+				"minHeight": false
 			}
 		},
 		"shadow": true,
@@ -63,6 +79,12 @@
 			"__experimentalDefaultControls": {
 				"fontSize": true
 			}
+		},
+		"layout": {
+			"allowEditing": false
+		},
+		"interactivity": {
+			"clientNavigation": true
 		}
 	},
 	"example": {
