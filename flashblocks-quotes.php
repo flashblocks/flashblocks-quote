@@ -11,7 +11,7 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       flashblocks-quotes
  * Flashblocks Module: yes
- * Flashblocks Category: content
+ * Flashblocks Category: Blocks
  * Flashblocks Tags: quotes, testimonials
  *
  * @package FlashblocksQuotes
